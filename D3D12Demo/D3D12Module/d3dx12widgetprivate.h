@@ -16,32 +16,35 @@ public:
 
 private:
     // Init DirectX12 3D.
-    void Initialize();
+    void initialize();
 
     // DirectX12 3D Render.
-    void Render();
+    void render();
+
+    // Handle viewport size when window size change.
+    void resize();
 
     // Helper function for resolving the full path of assets.
-    QString GetAssetFullPath(const QString& assetName) const { return m_assetsPath + assetName; }
+    QString getAssetFullPath(const QString& assetName) const { return m_assetsPath + assetName; }
 
     // Helper function for acquiring the first available hardware adapter that supports Direct3D 12.
     // If no such adapter can be found, *ppAdapter will be set to nullptr.
-    void GetHardwareAdapter(_In_ IDXGIFactory1* pFactory, _Outptr_result_maybenull_ IDXGIAdapter1** ppAdapter, bool requestHighPerformanceAdapter = false);
+    void getHardwareAdapter(_In_ IDXGIFactory1* pFactory, _Outptr_result_maybenull_ IDXGIAdapter1** ppAdapter, bool requestHighPerformanceAdapter = false);
 
     // Specific initialization process.
-    D3DX12WidgetPrivate* InitViewport();
-    D3DX12WidgetPrivate* LoadPipeline();
-    D3DX12WidgetPrivate* LoadAssets();
+    D3DX12WidgetPrivate* initViewport();
+    D3DX12WidgetPrivate* loadPipeline();
+    D3DX12WidgetPrivate* loadAssets();
 
     // Specific render process.
-    D3DX12WidgetPrivate* OnUpdate();
-    D3DX12WidgetPrivate* OnRender();
+    D3DX12WidgetPrivate* onUpdate();
+    D3DX12WidgetPrivate* onRender();
 
     // Record all the commands we need to render the scene into the command list.
-    D3DX12WidgetPrivate* PopulateCommandList();
+    D3DX12WidgetPrivate* populateCommandList();
 
     // WAITING FOR THE FRAME TO COMPLETE BEFORE CONTINUING IS NOT BEST PRACTICE.
-    D3DX12WidgetPrivate* WaitForPreviousFrame();
+    D3DX12WidgetPrivate* waitForPreviousFrame();
 
     // Viewport aspect ratio.
     float m_aspectRatio;

@@ -9,14 +9,23 @@ D3DX12Widget::D3DX12Widget(QWidget *parent)
     setAttribute(Qt::WA_PaintOnScreen, true);
 }
 
-void D3DX12Widget::Initialize()
+void D3DX12Widget::initialize()
 {
-    d_func()->Initialize();
+    Q_D(D3DX12Widget);
+    d->initialize();
 }
 
 void D3DX12Widget::paintEvent(QPaintEvent *event)
 {
     Q_UNUSED(event);
-    d_func()->Render();
+    Q_D(D3DX12Widget);
+    d->render();
     update();
+}
+
+void D3DX12Widget::resizeEvent(QResizeEvent *event)
+{
+    Q_UNUSED(event);
+    Q_D(D3DX12Widget);
+    d->resize();
 }

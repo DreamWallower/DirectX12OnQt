@@ -13,7 +13,7 @@ class D3DX12Widget final : public QWidget
 public:
     explicit D3DX12Widget(QWidget* parent = nullptr);
 
-    void Initialize();
+    void initialize();
 
 protected:
     // Disable Qt internal rendering process.
@@ -21,5 +21,8 @@ protected:
 
     // Handle painter event.
     virtual void paintEvent(QPaintEvent *event) Q_DECL_OVERRIDE;
+
+    // Handle resize event.
+    virtual void resizeEvent(QResizeEvent *event) Q_DECL_OVERRIDE;
 };
 

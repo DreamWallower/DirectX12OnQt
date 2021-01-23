@@ -1,4 +1,5 @@
 #include "d3dx12widgetprivate.h"
+#include <QtGlobal>
 
 #define D3DX12_BEGIN    { this
 #define D3DX12_END      }
@@ -8,39 +9,55 @@
 D3DX12WidgetPrivate::D3DX12WidgetPrivate(D3DX12Widget *qq)
     : m_useWarpDevice(false)
     , m_assetsPath("../")
-    , m_frameIndex(0)
     , m_rtvDescriptorSize(0)
+    , m_frameIndex(0)
+    , m_aspectRatio(1)
 {
     q_ptr = qq;
 }
 
 D3DX12WidgetPrivate::~D3DX12WidgetPrivate()
 {
-    WaitForPreviousFrame();
+    waitForPreviousFrame();
     CloseHandle(m_fenceEvent);
 }
 
-void D3DX12WidgetPrivate::Initialize()
+void D3DX12WidgetPrivate::initialize()
 {
     D3DX12_BEGIN
-            ->InitViewport()
-            ->LoadPipeline()
-            ->LoadAssets();
+            ->initViewport()
+            ->loadPipeline()
+            ->loadAssets();
     D3DX12_END
 }
 
-void D3DX12WidgetPrivate::Render()
+void D3DX12WidgetPrivate::render()
 {
     D3DX12_BEGIN
-            ->OnUpdate()
-            ->OnRender();
+            ->onUpdate()
+            ->onRender();
     D3DX12_END
+}
+
+void D3DX12WidgetPrivate::resize()
+{
+    Q_Q(D3DX12Widget);
+    m_aspectRatio = q->width() * 1.f / q->height();
+
+    m_viewport.TopLeftX = -100;
+    m_viewport.TopLeftY = 100;
+    m_viewport.Width = 800; //q->width();
+    m_viewport.Height = 600; //q->height();
+
+
+    m_scissorRect.right = 800; //q->width();
+    m_scissorRect.bottom = 600; //q->height();
 }
 
 // Helper function for acquiring the first available hardware adapter that supports Direct3D 12.
 // If no such adapter can be found, *ppAdapter will be set to nullptr.
 _Use_decl_annotations_
-void D3DX12WidgetPrivate::GetHardwareAdapter(IDXGIFactory1* pFactory, IDXGIAdapter1** ppAdapter, bool requestHighPerformanceAdapter)
+void D3DX12WidgetPrivate::getHardwareAdapter(IDXGIFactory1* pFactory, IDXGIAdapter1** ppAdapter, bool requestHighPerformanceAdapter)
 {
     *ppAdapter = nullptr;
 
@@ -102,20 +119,20 @@ void D3DX12WidgetPrivate::GetHardwareAdapter(IDXGIFactory1* pFactory, IDXGIAdapt
 }
 
 // Create viewport.
-D3DX12WidgetPrivate *D3DX12WidgetPrivate::InitViewport()
+D3DX12WidgetPrivate *D3DX12WidgetPrivate::initViewport()
 {
-    const D3DX12Widget* const pp = static_cast<D3DX12Widget*>(q_ptr);
-    m_viewport = CD3DX12_VIEWPORT{ 0.0f, 0.0f, static_cast<float>(pp->width()), static_cast<float>(pp->height()) };
-    m_scissorRect = CD3DX12_RECT{ 0, 0, static_cast<LONG>(pp->width()), static_cast<LONG>(pp->height()) };
+    Q_Q(D3DX12Widget);
+    m_viewport = CD3DX12_VIEWPORT{ 0.0f, 0.0f, static_cast<float>(q->width()), static_cast<float>(q->height()) };
+    m_scissorRect = CD3DX12_RECT{ 0, 0, static_cast<LONG>(q->width()), static_cast<LONG>(q->height()) };
 
     return this;
 }
 
 // Load render pipeline.
-D3DX12WidgetPrivate *D3DX12WidgetPrivate::LoadPipeline()
+D3DX12WidgetPrivate *D3DX12WidgetPrivate::loadPipeline()
 {
+    Q_Q(D3DX12Widget);
     UINT dxgiFactoryFlags = 0;
-    const D3DX12Widget* const pp = static_cast<D3DX12Widget*>(q_ptr);
 
 #if defined(_DEBUG)
     // Enable the debug layer (requires the Graphics Tools "optional feature").
@@ -149,7 +166,7 @@ D3DX12WidgetPrivate *D3DX12WidgetPrivate::LoadPipeline()
     else
     {
         ComPtr<IDXGIAdapter1> hardwareAdapter;
-        GetHardwareAdapter(factory.Get(), &hardwareAdapter);
+        getHardwareAdapter(factory.Get(), &hardwareAdapter);
 
         ThrowIfFailed(D3D12CreateDevice(
                           hardwareAdapter.Get(),
@@ -168,8 +185,8 @@ D3DX12WidgetPrivate *D3DX12WidgetPrivate::LoadPipeline()
     // Describe and create the swap chain.
     DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
     swapChainDesc.BufferCount = FrameCount;
-    swapChainDesc.Width = pp->width();
-    swapChainDesc.Height = pp->height();
+    swapChainDesc.Width =600; q->width();
+    swapChainDesc.Height = 800;q->height();
     swapChainDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
     swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
     swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
@@ -178,7 +195,7 @@ D3DX12WidgetPrivate *D3DX12WidgetPrivate::LoadPipeline()
     ComPtr<IDXGISwapChain1> swapChain;
     ThrowIfFailed(factory->CreateSwapChainForHwnd(
                       m_commandQueue.Get(),        // Swap chain needs the queue so that it can force a flush on it.
-                      (HWND)pp->winId(),
+                      (HWND)q->winId(),
                       &swapChainDesc,
                       nullptr,
                       nullptr,
@@ -186,7 +203,7 @@ D3DX12WidgetPrivate *D3DX12WidgetPrivate::LoadPipeline()
                       ));
 
     // This sample does not support fullscreen transitions.
-    ThrowIfFailed(factory->MakeWindowAssociation((HWND)pp->winId(), DXGI_MWA_NO_ALT_ENTER));
+    ThrowIfFailed(factory->MakeWindowAssociation((HWND)q->winId(), DXGI_MWA_NO_ALT_ENTER));
 
     ThrowIfFailed(swapChain.As(&m_swapChain));
     m_frameIndex = m_swapChain->GetCurrentBackBufferIndex();
@@ -221,10 +238,8 @@ D3DX12WidgetPrivate *D3DX12WidgetPrivate::LoadPipeline()
 }
 
 // Load the sample assets.
-D3DX12WidgetPrivate *D3DX12WidgetPrivate::LoadAssets()
+D3DX12WidgetPrivate *D3DX12WidgetPrivate::loadAssets()
 {
-    const D3DX12Widget* const pp = static_cast<D3DX12Widget*>(q_ptr);
-
     // Create an empty root signature.
     {
         CD3DX12_ROOT_SIGNATURE_DESC rootSignatureDesc;
@@ -287,7 +302,6 @@ D3DX12WidgetPrivate *D3DX12WidgetPrivate::LoadAssets()
 
     // Create the vertex buffer.
     {
-        m_aspectRatio = pp->width() * 1.f / pp->height();
         // Define the geometry for a triangle.
         Vertex triangleVertices[] =
         {
@@ -338,23 +352,23 @@ D3DX12WidgetPrivate *D3DX12WidgetPrivate::LoadAssets()
         // Wait for the command list to execute; we are reusing the same command
         // list in our main loop but for now, we just want to wait for setup to
         // complete before continuing.
-        WaitForPreviousFrame();
+        waitForPreviousFrame();
     }
 
     return this;
 }
 
 // Call every frame before OnRender.
-D3DX12WidgetPrivate *D3DX12WidgetPrivate::OnUpdate()
+D3DX12WidgetPrivate *D3DX12WidgetPrivate::onUpdate()
 {
     return this;
 }
 
 // Call every frame.
-D3DX12WidgetPrivate *D3DX12WidgetPrivate::OnRender()
+D3DX12WidgetPrivate *D3DX12WidgetPrivate::onRender()
 {
     // Record all the commands we need to render the scene into the command list.
-    PopulateCommandList();
+    populateCommandList();
 
     // Execute the command list.
     ID3D12CommandList* ppCommandLists[] = { m_commandList.Get() };
@@ -363,12 +377,12 @@ D3DX12WidgetPrivate *D3DX12WidgetPrivate::OnRender()
     // Present the frame.
     ThrowIfFailed(m_swapChain->Present(1, 0));
 
-    WaitForPreviousFrame();
+    waitForPreviousFrame();
     return this;
 }
 
 // Record all the commands we need to render the scene into the command list.
-D3DX12WidgetPrivate *D3DX12WidgetPrivate::PopulateCommandList()
+D3DX12WidgetPrivate *D3DX12WidgetPrivate::populateCommandList()
 {
     // Command list allocators can only be reset when the associated
     // command lists have finished execution on the GPU; apps should use
@@ -406,7 +420,7 @@ D3DX12WidgetPrivate *D3DX12WidgetPrivate::PopulateCommandList()
 }
 
 // WAITING FOR THE FRAME TO COMPLETE BEFORE CONTINUING IS NOT BEST PRACTICE.
-D3DX12WidgetPrivate *D3DX12WidgetPrivate::WaitForPreviousFrame()
+D3DX12WidgetPrivate *D3DX12WidgetPrivate::waitForPreviousFrame()
 {
     // This is code implemented as such for simplicity. The D3D12HelloFrameBuffering
     // sample illustrates how to use fences for efficient resource usage and to
